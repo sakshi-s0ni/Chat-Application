@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Messenger</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+<!--===============================================================================================-->  
+    <link rel="icon" type="image/png" href="../static/images/icons/favicon.ico"/>
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/vendor/bootstrap/css/bootstrap.min.css">
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/vendor/animate/animate.css">
+<!--===============================================================================================-->  
+    <link rel="stylesheet" type="text/css" href="../static/vendor/css-hamburgers/hamburgers.min.css">
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/vendor/animsition/css/animsition.min.css">
+<!--===============================================================================================-->
+    <link rel="stylesheet" type="text/css" href="../static/vendor/select2/select2.min.css">
+<!--===============================================================================================-->  
+    <link rel="stylesheet" type="text/css" href="../static/vendor/daterangepicker/daterangepicker.css">
+
+    <link rel="stylesheet" type="text/css" href="../static/css/user.css">
+
+
+</head>
+<body id="body_tag" style="background-image: url('../static/images/background.jpg');">
+
+    <div class="split_users">
+        <div style="text-align: center;">
+            <h1 style="display: inline-block;">{{username}}</h1>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <a href="/" style="margin-top: 0;"><button id="logout">Logout</button></a>
+        </div>
+        <hr>
+        <div class="users_div">
+        {% for user in all_users %}
+                            <button onclick="user_clicked('{{user}}')" id="user_button_{{user}}" class="users_button">{{ user }}</button>
+                        {% endfor %}
+        </div>
+    </div>
+    <div class="split_messages">
+        <div style="padding-left: 20px;">
+            <h1 style="text-align: center;" id="message_heading">Messages</h1>
+        </div>
+        <hr>
+        <div id="message_div" style="background-image: url('../static/images/m_image.jpg');">
+            <div style="font-size: 20px;" class="message_display" id="message_display">
+                <!-- <p id="conversations"></p> -->
+            </div>
+            <div style="background-image: url('../static/images/background.jpg');" class="message_send_button">
+                <form method="POST">
+                    <input type="text" id="message_input" placeholder="Enter Message">
+                    <button type="submit" id="send_button">Send</button>
+                </form>
+            </div>
+        </div>
+        
+    </div>
+
+    <script src="../static/vendor/jquery/jquery-3.2.1.min.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/vendor/animsition/js/animsition.min.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/vendor/bootstrap/js/popper.js"></script>
+    <script src="../static/vendor/bootstrap/js/bootstrap.min.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/vendor/select2/select2.min.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/vendor/daterangepicker/moment.min.js"></script>
+    <script src="../static/vendor/daterangepicker/daterangepicker.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/vendor/countdowntime/countdowntime.js"></script>
+<!--===============================================================================================-->
+    <script src="../static/js/main.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/virgil-crypto@^4.0.0/dist/browser.umd.js"></script>
+
+    <script type="text/javascript">
+
+        function user_clicked(receiver_username){
+
+            $('#user_button_' + receiver_username).css('background-color', 'white');
+            $("#message_input").val('');
+            username = '{{username}}';
+            $.ajax({
+
+                url: '/message',
+                type : 'POST',
+                dataType :'json', 
+                data : {receiver_username : receiver_username, username : username},
+                success:function(data) {
+
+                    var conversations = data.conversations;
+                    var receiver_public_key = data.receiver_public_key;
+                    window.localStorage.setItem('receiver_public_key', receiver_public_key);
+                    var chats = "";
+
+                    VirgilCrypto.initCrypto().then(() => {
+                        const virgilCrypto = new VirgilCrypto.VirgilCrypto();
+                        var my_private_key = window.localStorage.getItem(username+'_private_key');
+
+                    for(var i=0 ; i<conversations.length ; i = i+2){
+                        var decryptedData = virgilCrypto.decrypt(conversations[i+1], virgilCrypto.importPrivateKey(my_private_key));
+                        decryptedData = decryptedData.toString('utf8');
+
+                        if(conversations[i] == receiver_username){
+                            chats += "<p>" + decryptedData + "</p>";
+                        }
+                        else{
+                            chats += "<p style='text-align:right;'>" + decryptedData + "</p>";
+                        }
+                    }
+                    document.getElementById("message_display").innerHTML = chats;
+                    })
+                }
+            })
+            $("#message_div").css("visibility","visible");
+            $("#message_heading").html(receiver_username);
+        }
+    </script>
+
+    <script type="text/javascript">
+    
+        $(document).ready(function(){
+
+            var send_button_present ;
+            var username = '{{username}}';
+
+            $("#logout").click(function(){
+                document.cookie = 'token=;' + 'max-age = 0;';
+                window.localStorage.removeItem('receiver_public_key');
+                window.localStorage.removeItem(username+'_public_key'); 
+            });
+
+            var socket = io.connect('http://127.0.0.1:5000');
+
+            socket.on('message',function(msg){
+                if(msg[1] == $("#message_heading").html() || msg[1] == username){
+                    var chats = "";
+
+                    VirgilCrypto.initCrypto().then(() => {
+                    const virgilCrypto = new VirgilCrypto.VirgilCrypto();
+                    var my_private_key = window.localStorage.getItem(username+'_private_key');
+
+                    if(msg[1] == $("#message_heading").html()){
+                    for(var i=0 ; i<msg[0].length ; i = i+2){
+                        var decryptedData = virgilCrypto.decrypt(msg[0][i+1], virgilCrypto.importPrivateKey(my_private_key));
+                        decryptedData = decryptedData.toString('utf8');
+                        if(msg[0][i] == msg[1]){
+                            chats += "<p>" + decryptedData + "</p>";
+                        }
+                        else{
+                            chats += "<p style='text-align:right;'>" + decryptedData + "</p>";
+                        }
+                    }
+                    }
+                    else{
+                    for(var i=0 ; i<msg[0].length ; i = i+2){
+                        var decryptedData = virgilCrypto.decrypt(msg[0][i+1], virgilCrypto.importPrivateKey(my_private_key));
+                        decryptedData = decryptedData.toString('utf8');
+                        if(msg[0][i] == msg[1]){
+                            chats += "<p style='text-align:right;'>" + decryptedData + "</p>";
+                        }
+                        else{
+                            chats += "<p>" + decryptedData + "</p>";
+                        }
+                    }
+                    }
+                    document.getElementById("message_display").innerHTML = chats;
+                    })
+                }
+                else{
+                    $('#user_button_' + msg[1]).css('background-color', 'green');
+                }              
+            })
+
+            socket.on('session_id',function(msg){
+                $("#body_tag").css("filter","blur(8px)");
+                alert("You loggedin with new tab! Please close it an retry");
+            })
+
+            socket.emit('session_id');
+            
+
+            const sendButton = document.getElementById('send_button');
+            sendButton.addEventListener('click',function(e){
+                if (send_button_present) {
+                    send_button_present = false; // reset flag
+                    return; // let the event bubble away
+                }
+
+                e.preventDefault();
+                var receiver_username = $("#message_heading").html();
+                var some_message = $("#message_input").val();
+
+                if(some_message != ''){
+
+                    VirgilCrypto.initCrypto().then(() => {
+                        const virgilCrypto = new VirgilCrypto.VirgilCrypto();
+                        const my_public_key = window.localStorage.getItem(username+'_public_key');
+                        const receiver_public_key = window.localStorage.getItem('receiver_public_key');
+                        var message1 = virgilCrypto.encrypt(
+                            { value: some_message, encoding: 'utf8' },
+                            virgilCrypto.importPublicKey(my_public_key)
+                        );
+                        message1 = message1.toString('base64');
+
+                        var message2 = virgilCrypto.encrypt(
+                            { value: some_message, encoding: 'utf8' },
+                            virgilCrypto.importPublicKey(receiver_public_key)
+                        );
+                        message2 = message2.toString('base64');
+
+                    socket.emit('message',receiver_username,message1,message2,username);
+                });
+                }
+                $("#message_input").val('');
+                //code ends
+            })
+        })
+    </script>
+
+</body>
+</html>
