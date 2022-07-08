@@ -1,0 +1,95 @@
+h1{
+	font-size: 50px;
+}
+
+h2{
+	color: red;
+	font-size: 100px;
+}
+
+p{
+	margin-bottom: 0;
+	margin-left: 40px;
+	margin-right: 40px;
+}
+
+a{
+	font-size: 15px;
+	color: black;
+}
+
+.split_users{
+	border-width: 0 5px 0 0;
+	border-style: solid;
+	height: 100%;
+	width: 30%;
+	position: fixed;
+	left: 0;
+}
+
+.split_messages{
+	height: 100%;
+	width: 70%;
+	position: fixed;
+	right: 0
+}
+
+hr{
+	border : 2.5px solid;
+	margin-bottom: 0;
+}
+
+.users_div{
+	height: 100%;
+	overflow-y: scroll;
+}
+
+.users_button{
+	height: 80px;
+	width: 100%;
+}
+
+#message_div{
+	visibility: hidden;
+	height: 100%;
+	position: fixed;
+	width: 100%;
+}
+
+.message_display{
+	overflow-y: scroll;
+	border-width: 5px 0 5px 0;
+	border-style: solid;
+	position: fixed;
+	top: 71px;
+	bottom: 50px;
+	width: 70%;
+
+}
+
+.messages{
+	display: block;
+	width: 100%;
+	height: 10px;
+}
+
+#message_input{
+	margin-top: 5px;
+	margin-left: 10px;
+	height: 40px;
+	width: 85%;
+}
+
+#send_button{
+	text-align: center;
+	right: 0;
+	height: 40px;
+	width: 10%;
+}
+
+.message_send_button{
+	position: fixed;
+	height: 50px;
+	bottom :0;
+	width: 70%;
+}
